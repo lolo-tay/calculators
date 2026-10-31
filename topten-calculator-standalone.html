@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Top Ten — Printing Calculator</title>
+<style>
+  :root{
+    --page-bg: #E4DFD3;
+    --case: #2B2E33;
+    --case-edge: #1B1D21;
+    --case-highlight: #3A3E45;
+    --key-face: #EDE9E1;
+    --key-face-active: #DCD6C8;
+    --key-face-shadow: #B7B0A0;
+    --key-fn: #6B7280;
+    --key-fn-shadow: #474C56;
+    --key-op: #D98A3D;
+    --key-op-shadow: #A8631F;
+    --key-eq: #E0862A;
+    --key-eq-shadow: #A8631F;
+    --key-text: #221F1C;
+    --key-text-light: #FBF8F2;
+    --display-bg: #1A1206;
+    --display-fg: #FFB020;
+    --display-fg-dim: #4A3A18;
+    --tape-bg: #FBF8F2;
+    --tape-edge: #E3DCC9;
+    --tape-ink: #2B2114;
+    --tape-ink-dim: #948B72;
+    --text: #2B2114;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --page-bg: #17150F;
+      --case: #232629;
+      --case-edge: #101113;
+      --case-highlight: #33373D;
+      --key-face: #D8D2C4;
+      --key-face-active: #C6BFAE;
+      --tape-bg: #EDE7DA;
+      --tape-edge: #D8CFB6;
+    }
+  }
+  :root[data-theme="dark"]{
+    --page-bg: #17150F;
+    --case: #232629;
+    --case-edge: #101113;
+    --case-highlight: #33373D;
+    --key-face: #D8D2C4;
+    --key-face-active: #C6BFAE;
+    --tape-bg: #EDE7DA;
+    --tape-edge: #D8CFB6;
+  }
+
+  *{ box-sizing: border-box; }
+  html, body{
+    height: 100%;
+    margin: 0;
+    background: var(--page-bg);
+  }
+  body{
+    font-family: var(--sans);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: max(24px, env(safe-area-inset-top, 0px)) 16px max(24px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .rig{
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 720px;
+  }
+
+  /* ---- Calculator body ---- */
+  .calc{
+    width: 300px;
+    background: linear-gradient(180deg, var(--case-highlight), var(--case));
+    border-radius: 22px;
+    padding: 18px 16px 20px;
+    box-shadow:
+      0 1px 0 var(--case-highlight) inset,
+      0 18px 34px rgba(20,16,8,0.28),
+      0 2px 0 var(--case-edge);
+    flex: none;
+  }
+  .brand{
+    display:flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 2px 4px 10px;
+    color: #9A9FA8;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+  }
+  .brand b{ color: #C9CDD3; font-weight: 650; }
+
+  .screen{
+    background: var(--display-bg);
+    border-radius: 10px;
+    padding: 14px 16px 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4) inset, 0 1px 0 rgba(255,255,255,0.03);
+    margin-bottom: 14px;
+  }
+  .screen-sub{
+    font-family: var(--mono);
+    font-size: 13px;
+    min-height: 16px;
+    color: var(--display-fg-dim);
+    text-align: right;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .screen-main{
+    font-family: var(--mono);
+    font-size: 34px;
+    font-weight: 700;
+    text-align: right;
+    color: var(--display-fg);
+    text-shadow: 0 0 12px rgba(255,176,32,0.35);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    min-height: 42px;
+    line-height: 42px;
+  }
+
+  .keys{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 9px;
+  }
+  button.key{
+    font-family: var(--sans);
+    border: none;
+    border-radius: 10px;
+    font-size: 17px;
+    font-weight: 600;
+    padding: 15px 0;
+    cursor: pointer;
+    background: var(--key-face);
+    color: var(--key-text);
+    box-shadow: 0 3px 0 var(--key-face-shadow);
+    transition: transform 0.05s ease, box-shadow 0.05s ease;
+  }
+  button.key:active{
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 var(--key-face-shadow);
+    background: var(--key-face-active);
+  }
+  button.key:focus-visible{
+    outline: 2px solid var(--key-op);
+    outline-offset: 2px;
+  }
+  button.key.fn{
+    background: var(--key-fn);
+    color: var(--key-text-light);
+    box-shadow: 0 3px 0 var(--key-fn-shadow);
+  }
+  button.key.op{
+    background: var(--key-op);
+    color: var(--key-text-light);
+    box-shadow: 0 3px 0 var(--key-op-shadow);
+  }
+  button.key.eq{
+    background: var(--key-eq);
+    color: var(--key-text-light);
+    box-shadow: 0 3px 0 var(--key-eq-shadow);
+  }
+  button.key.wide{ grid-column: span 2; }
+
+  /* ---- Paper tape ---- */
+  .tape-wrap{
+    width: 220px;
+    flex: none;
+  }
+  .tape-tear{
+    height: 12px;
+    background:
+      linear-gradient(135deg, transparent 50%, var(--tape-bg) 50%) 0 0/10px 12px repeat-x,
+      linear-gradient(-135deg, transparent 50%, var(--tape-bg) 50%) 0 0/10px 12px repeat-x;
+  }
+  .tape{
+    background: var(--tape-bg);
+    border-left: 1px solid var(--tape-edge);
+    border-right: 1px solid var(--tape-edge);
+    padding: 4px 14px 16px;
+    min-height: 120px;
+    max-height: 360px;
+    overflow-y: auto;
+    box-shadow: 0 10px 22px rgba(20,16,8,0.12);
+  }
+  .tape-title{
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--tape-ink-dim);
+    letter-spacing: 0.04em;
+    padding: 4px 0 10px;
+    border-bottom: 1px dashed var(--tape-edge);
+    margin-bottom: 10px;
+  }
+  .receipt-header{
+    text-align: center;
+    font-family: var(--mono);
+    padding-bottom: 10px;
+    margin-bottom: 4px;
+    border-bottom: 1px dashed var(--tape-edge);
+  }
+  .receipt-header .store{
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 0.06em;
+  }
+  .receipt-header .tagline{
+    font-size: 10px;
+    color: var(--tape-ink-dim);
+    margin-top: 2px;
+  }
+  .receipt-item{
+    font-family: var(--mono);
+    color: var(--tape-ink);
+    padding: 7px 0;
+    border-bottom: 1px dashed var(--tape-edge);
+    cursor: pointer;
+  }
+  .receipt-item:hover .desc{ color: var(--key-op); }
+  .receipt-row{
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 12.5px;
+  }
+  .receipt-row .desc{ }
+  .receipt-row .price{ font-weight: 700; white-space: nowrap; margin-left: 8px; }
+  .receipt-qty{
+    font-size: 10px;
+    color: var(--tape-ink-dim);
+    margin-top: 2px;
+  }
+  .receipt-footer{
+    text-align: center;
+    padding-top: 12px;
+  }
+  .barcode{
+    height: 26px;
+    margin: 4px auto 6px;
+    width: 84%;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--tape-ink), var(--tape-ink) 2px,
+      transparent 2px, transparent 4px,
+      var(--tape-ink) 4px, var(--tape-ink) 5px,
+      transparent 5px, transparent 8px
+    );
+  }
+  .receipt-footer .thanks{
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    color: var(--tape-ink-dim);
+  }
+  .tape-empty{
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--tape-ink-dim);
+    padding: 14px 0;
+    text-align: center;
+  }
+  .tape-clear{
+    display:block;
+    width: 100%;
+    margin-top: 6px;
+    background: none;
+    border: none;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--tape-ink-dim);
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 6px 0 0;
+  }
+  .tape-clear:hover{ color: var(--tape-ink); }
+
+  @media (max-width: 560px){
+    .rig{ flex-direction: column; align-items: center; }
+    .tape-wrap{ width: 300px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .tape-entry{ animation: none !important; }
+  }
+
+  @keyframes feed-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .receipt-item.new{ animation: feed-in 0.18s ease-out; }
+</style>
+</head>
+<body>
+  <div class="rig">
+    <div class="calc">
+      <div class="brand"><b>Model Ten</b><span>solar</span></div>
+      <div class="screen">
+        <div class="screen-sub" id="screenSub">&nbsp;</div>
+        <div class="screen-main" id="screenMain">0</div>
+      </div>
+      <div class="keys" id="keys">
+        <button class="key fn" data-action="clear">AC</button>
+        <button class="key fn" data-action="sign">±</button>
+        <button class="key fn" data-action="percent">%</button>
+        <button class="key op" data-action="op" data-op="÷">÷</button>
+
+        <button class="key" data-digit="7">7</button>
+        <button class="key" data-digit="8">8</button>
+        <button class="key" data-digit="9">9</button>
+        <button class="key op" data-action="op" data-op="×">×</button>
+
+        <button class="key" data-digit="4">4</button>
+        <button class="key" data-digit="5">5</button>
+        <button class="key" data-digit="6">6</button>
+        <button class="key op" data-action="op" data-op="−">−</button>
+
+        <button class="key" data-digit="1">1</button>
+        <button class="key" data-digit="2">2</button>
+        <button class="key" data-digit="3">3</button>
+        <button class="key op" data-action="op" data-op="+">+</button>
+
+        <button class="key wide" data-digit="0">0</button>
+        <button class="key" data-action="decimal">.</button>
+        <button class="key eq" data-action="equals">=</button>
+      </div>
+    </div>
+
+    <div class="tape-wrap">
+      <div class="tape">
+        <div class="tape-title">yourkalculator</div>
+        <div class="receipt-header">
+          <div class="store">CALC MART</div>
+          <div class="tagline">every sum, itemized</div>
+        </div>
+        <div id="tapeList"></div>
+        <div class="receipt-footer" id="receiptFooter" style="display:none;">
+          <div class="barcode"></div>
+          <div class="thanks">thank you — come again</div>
+        </div>
+        <div style="display:flex; gap:10px; justify-content:center; margin-top:2px;">
+          <button class="tape-clear" id="tapeClear">clear receipt</button>
+          <button class="tape-clear" id="downloadBtn" style="display:none;">download receipt</button>
+        </div>
+      </div>
+      <div class="tape-tear"></div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const screenMain = document.getElementById('screenMain');
+  const screenSub = document.getElementById('screenSub');
+  const tapeList = document.getElementById('tapeList');
+  const tapeClear = document.getElementById('tapeClear');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const keys = document.getElementById('keys');
+
+  let downloadsCap = null;
+
+  const MAX_LEN = 14;
+  const STORAGE_KEY = 'topten-calc-receipt-v1';
+
+  let current = '0';
+  let previous = null;
+  let pendingOp = null;
+  let justEvaluated = false;
+  let tape = [];
+  let recipeCounter = 0;
+
+  function loadTape(){
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        tape = parsed.tape || [];
+        recipeCounter = parsed.counter || 0;
+      }
+    } catch (e) { tape = []; recipeCounter = 0; }
+  }
+  function saveTape(){
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ tape, counter: recipeCounter })); } catch (e) {}
+  }
+
+  function formatDisplay(str){
+    if (str.length > MAX_LEN) return 'Error';
+    return str;
+  }
+
+  function formatPrinted(num){
+    if (!isFinite(num)) return 'Error';
+    let s = Number(num.toPrecision(12)).toString();
+    if (s.length > 12) s = Number(num).toExponential(4);
+    const parts = s.split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.join('.');
+  }
+
+  function render(){
+    screenMain.textContent = formatDisplay(current);
+    if (pendingOp && !justEvaluated) {
+      screenSub.textContent = formatPrinted(previous) + ' ' + pendingOp;
+    } else {
+      screenSub.textContent = '\u00A0';
+    }
+  }
+
+  function formatPrice(num){
+    if (isNaN(num) || !isFinite(num)) return 'VOID';
+    const negative = num < 0;
+    const fixed = Math.abs(num).toFixed(2);
+    const parts = fixed.split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return (negative ? '-' : '') + parts.join('.');
+  }
+
+  function renderTape(){
+    tapeList.innerHTML = '';
+    const footer = document.getElementById('receiptFooter');
+    if (tape.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'tape-empty';
+      empty.textContent = 'cart is empty';
+      tapeList.appendChild(empty);
+      footer.style.display = 'none';
+      downloadBtn.style.display = 'none';
+      return;
+    }
+    footer.style.display = 'block';
+    if (downloadsCap) downloadBtn.style.display = 'inline';
+    tape.forEach((entry, i) => {
+      const row = document.createElement('div');
+      row.className = 'receipt-item' + (i === 0 ? ' new' : '');
+      row.innerHTML =
+        '<div class="receipt-row"><span class="desc">' + entry.expr + '</span><span class="price">' + entry.price + '</span></div>' +
+        '<div class="receipt-qty">item #' + entry.num + ' &middot; qty 1</div>';
+      row.addEventListener('click', () => {
+        current = entry.raw;
+        previous = null;
+        pendingOp = null;
+        justEvaluated = true;
+        render();
+      });
+      tapeList.appendChild(row);
+    });
+  }
+
+  function pushTape(a, op, b, rawResult){
+    recipeCounter += 1;
+    const expr = formatPrinted(a) + ' ' + op + ' ' + formatPrinted(b);
+    const isBad = isNaN(rawResult) || !isFinite(rawResult);
+    tape.unshift({
+      num: recipeCounter,
+      expr: expr,
+      price: formatPrice(rawResult),
+      raw: isBad ? '0' : String(rawResult),
+    });
+    tape = tape.slice(0, 10);
+    saveTape();
+    renderTape();
+  }
+
+  function compute(a, op, b){
+    switch(op){
+      case '+': return a + b;
+      case '−': return a - b;
+      case '×': return a * b;
+      case '÷': return b === 0 ? NaN : a / b;
+      default: return b;
+    }
+  }
+
+  function inputDigit(d){
+    if (justEvaluated) {
+      current = d === '.' ? '0.' : d;
+      justEvaluated = false;
+      render();
+      return;
+    }
+    if (current.length >= MAX_LEN) return;
+    if (current === '0' && d !== '.') {
+      current = d;
+    } else {
+      current += d;
+    }
+    render();
+  }
+
+  function inputDecimal(){
+    if (justEvaluated) {
+      current = '0.';
+      justEvaluated = false;
+      render();
+      return;
+    }
+    if (!current.includes('.')) current += '.';
+    render();
+  }
+
+  function chooseOp(op){
+    const val = parseFloat(current);
+    if (pendingOp && !justEvaluated) {
+      const result = compute(previous, pendingOp, val);
+      previous = result;
+    } else {
+      previous = val;
+    }
+    pendingOp = op;
+    justEvaluated = false;
+    current = '0';
+    render();
+  }
+
+  function equals(){
+    if (pendingOp === null) return;
+    const val = parseFloat(current);
+    const a = previous;
+    const b = val;
+    const result = compute(a, pendingOp, b);
+    const expr = formatPrinted(a) + ' ' + pendingOp + ' ' + formatPrinted(b);
+
+    if (!isFinite(result)) {
+      current = 'Error';
+      screenMain.textContent = 'Error';
+      screenSub.textContent = expr;
+      pushTape(a, pendingOp, b, NaN);
+      previous = null;
+      pendingOp = null;
+      justEvaluated = true;
+      return;
+    }
+
+    pushTape(a, pendingOp, b, result);
+    current = String(result);
+    previous = null;
+    pendingOp = null;
+    justEvaluated = true;
+    render();
+  }
+
+  function clearAll(){
+    current = '0';
+    previous = null;
+    pendingOp = null;
+    justEvaluated = false;
+    render();
+  }
+
+  function toggleSign(){
+    if (current === '0') return;
+    current = current.startsWith('-') ? current.slice(1) : '-' + current;
+    render();
+  }
+
+  function percent(){
+    const val = parseFloat(current);
+    if (isNaN(val)) return;
+    if (pendingOp && previous !== null) {
+      current = String(previous * (val / 100));
+    } else {
+      current = String(val / 100);
+    }
+    render();
+  }
+
+  keys.addEventListener('click', (e) => {
+    const btn = e.target.closest('button.key');
+    if (!btn) return;
+    if (btn.dataset.digit !== undefined) { inputDigit(btn.dataset.digit); return; }
+    const action = btn.dataset.action;
+    if (action === 'clear') clearAll();
+    else if (action === 'sign') toggleSign();
+    else if (action === 'percent') percent();
+    else if (action === 'decimal') inputDecimal();
+    else if (action === 'equals') equals();
+    else if (action === 'op') chooseOp(btn.dataset.op);
+  });
+
+  tapeClear.addEventListener('click', () => {
+    tape = [];
+    saveTape();
+    renderTape();
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key >= '0' && e.key <= '9') { inputDigit(e.key); return; }
+    if (e.key === '.') { inputDecimal(); return; }
+    if (e.key === '+') { chooseOp('+'); return; }
+    if (e.key === '-') { chooseOp('−'); return; }
+    if (e.key === '*') { chooseOp('×'); return; }
+    if (e.key === '/') { e.preventDefault(); chooseOp('÷'); return; }
+    if (e.key === 'Enter' || e.key === '=') { equals(); return; }
+    if (e.key === 'Escape') { clearAll(); return; }
+    if (e.key === 'Backspace') {
+      if (justEvaluated) { clearAll(); return; }
+      current = current.length > 1 ? current.slice(0, -1) : '0';
+      render();
+      return;
+    }
+    if (e.key === '%') { percent(); return; }
+  });
+
+  function buildReceiptText(){
+    const lines = [];
+    lines.push('        CALC MART');
+    lines.push('     every sum, itemized');
+    lines.push('----------------------------------');
+    // tape is newest-first; print oldest-first like a real receipt
+    const inOrder = tape.slice().reverse();
+    inOrder.forEach((entry) => {
+      const desc = entry.expr;
+      const price = entry.price;
+      const padLen = Math.max(1, 30 - desc.length - price.length);
+      lines.push(desc + ' '.repeat(padLen) + price);
+      lines.push('  item #' + entry.num + '  qty 1');
+    });
+    lines.push('----------------------------------');
+    lines.push('     thank you — come again');
+    lines.push('');
+    lines.push('  ' + new Date().toLocaleString());
+    return lines.join('\n');
+  }
+
+  async function initDownloads(){
+    downloadsCap = true; // standard browsers always support the download below
+    if (tape.length > 0) downloadBtn.style.display = 'inline';
+  }
+
+  downloadBtn.addEventListener('click', () => {
+    if (!downloadsCap || tape.length === 0) return;
+    const blob = new Blob([buildReceiptText()], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'calc-mart-receipt.txt';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    const original = downloadBtn.textContent;
+    downloadBtn.textContent = 'saved!';
+    setTimeout(() => { downloadBtn.textContent = original; }, 1400);
+  });
+
+  initDownloads();
+
+  loadTape();
+  renderTape();
+  render();
+})();
+</script>
+</body>
+</html>
